@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from common.json import ModelEncoder
 from .models import Conference, Location, State
 from django.views.decorators.http import require_http_methods
+from .acls import get_photo, get_weather_data
 
 
 class LocationListEncoder(ModelEncoder):
@@ -38,6 +39,7 @@ class LocationDetailEncoder(ModelEncoder):
         "room_count",
         "created",
         "updated",
+        "picture_url",
     ]
 
     def get_extra_data(self, o):
@@ -72,7 +74,6 @@ def api_list_conferences(request):
                 {"message": "Invalid location id"},
                 status=400,
             )
-
         conference = Conference.objects.create(**content)
         return JsonResponse(
             conference,
@@ -100,6 +101,10 @@ def api_list_locations(request):
                 {"message": "Invalid state abbreviation"},
                 status=400,
             )
+        city = content["city"]
+        pic_url = get_photo(city, state)
+        content.update(pic_url)
+
         location = Location.objects.create(**content)
         return JsonResponse(
             location, encoder=LocationDetailEncoder, safe=False
@@ -142,9 +147,14 @@ def api_show_location(request, pk):
 def api_show_conference(request, pk):
     if request.method == "GET":
         conference = Conference.objects.get(id=pk)
+        city = conference.location.city
+        weather = get_weather_data(city, conference.location.state.name)
         return JsonResponse(
-            conference, encoder=ConferenceDetailEncoder, safe=False
+            {"conference": conference, "weather": weather},
+            encoder=ConferenceDetailEncoder,
+            safe=False,
         )
+
     elif request.method == "DELETE":
         count, _ = Conference.objects.filter(id=pk).delete()
         return JsonResponse({"deleted": count > 0})
@@ -156,7 +166,7 @@ def api_show_conference(request, pk):
             attendee,
             encoder=ConferenceDetailEncoder,
             safe=False,
-        )   
+        )
 
 
 # def api_list_conferences(request):

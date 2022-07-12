@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from common.json import ModelEncoder
-from .models import Attendee
-from models import ConferenceVO
+from .models import Attendee, ConferenceVO
 from django.views.decorators.http import require_http_methods
 import json
 

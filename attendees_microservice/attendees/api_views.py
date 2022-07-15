@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from common.json import ModelEncoder
-from .models import Attendee, ConferenceVO
+from .models import AccountVO, Attendee, ConferenceVO
 from django.views.decorators.http import require_http_methods
 import json
 
@@ -18,6 +18,11 @@ class AttendeeDetailEncoder(ModelEncoder):
         "company_name",
         "created",
     ]
+    encoders = {"conference": ConferenceVODetailEncoder}
+
+    def get_extra_data(self, o):
+        count = AccountVO.objects.filter(email=o.email).count()
+        return {"has_account": count > 0}
 
 
 class AttendeeListEncoder(ModelEncoder):
@@ -35,7 +40,8 @@ def api_list_attendees(request, conference_vo_id=None):
     else:
         content = json.loads(request.body)
         try:
-            conference = ConferenceVO.objects.get(id=conference_vo_id)
+            conference_href = content["conference"]
+            conference = ConferenceVO.objects.get(import_href=conference_href)
             content["conference"] = conference
         except ConferenceVO.DoesNotExist:
             return JsonResponse(
